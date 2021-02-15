@@ -1,5 +1,13 @@
 source ../cloud_venv/bin/activate
 
+Openstack CLI and used http requests and responses:
+
+source openrc
+
+openstack --debug flavor list
+
+
+
 Get token via keystone api:
 
 curl -i \
@@ -19,6 +27,15 @@ curl -i \
   }
 }' \
   "http://<OPENSTACK_IP>/identity/v3/auth/tokens?nocatalog" ; echo
+
+Start rest api:
+
+source cloud_venv/bin/activate
+
+cd test-cloud-manager
+
+python rest_api.py
+
 
 Get token via rest api:
 
