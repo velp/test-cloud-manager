@@ -1,0 +1,29 @@
+source ../cloud_venv/bin/activate
+
+Get token via keystone api:
+
+curl -i \
+  -H "Content-Type: application/json" \
+  -d '
+{ "auth": {
+    "identity": {
+      "methods": ["password"],
+      "password": {
+        "user": {
+          "name": <USER>,
+          "domain": { "id": "default" },
+          "password": <PASSWORD>
+        }
+      }
+    }
+  }
+}' \
+  "http://<OPENSTACK_IP>/identity/v3/auth/tokens?nocatalog" ; echo
+
+Get token via rest api:
+
+curl -i \
+  -H "Content-Type: application/json" \
+  -H "user: <USER>" \
+  -H "password: <PASSWORD>" \
+  "http://192.168.0.104:8081/api/token" ; echo
