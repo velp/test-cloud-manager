@@ -1,13 +1,26 @@
 import bottle
+import datetime
+import psycopg2
 
+import config
 import core
 
 app = bottle.Bottle()
-
+app.connection = psycopg2.connect(
+    f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+app.cursor = app.connection.cursor()
 
 def auth():
     def decorator(func):
         def wrapper(*args, **kwargs):
+            app.cursor.execute(
+                "INSERT INTO rest_api_requests (recorded_at, remote_address, url, http_method, request_body) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (datetime.datetime.now(), bottle.request.remote_addr, bottle.request.url, bottle.request.method,
+                 bottle.request.json))
+            app.connection.commit()
+            # cur.close()
+            # conn.close()
             if "user" not in bottle.request.headers:
                 return bottle.HTTPResponse(status=400, body={"error": "user was not provided"})
             if "password" not in bottle.request.headers:
@@ -18,7 +31,7 @@ def auth():
                     credentials["domain_id"] = bottle.request.headers["domain_id"]
                 keystone_response = core.get_token(**credentials)
                 if "error" in keystone_response:
-                    return bottle.HTTPResponse(status=keystone_response["status"],
+                    return bottle.HTTPResponse(status=503,
                                                body={"error": keystone_response["error"]})
                 bottle.request.token = keystone_response["token"]
                 return func(*args, **kwargs)

@@ -18,13 +18,17 @@ def get_token(user, password, domain_id="default"):
             }
         }
     }
-
-    keystone_response = requests.post(url=f"http://{config.openstack_ip}/identity/v3/auth/tokens?nocatalog", json=data)
     result = dict()
-    if keystone_response.status_code != 201:
-        result["error"] = f"keystone error: {keystone_response.text}"
+    try:
+        keystone_response = requests.post(url=f"http://{config.openstack_ip}/identity/v3/auth/tokens?nocatalog",
+                                          json=data)
+    except requests.exceptions.ConnectionError:
+        result["error"] = f"keystone is not available."
     else:
-        result["token"] = keystone_response.headers["X-Subject-Token"]
+        if keystone_response.status_code != 201:
+            result["error"] = f"keystone error: {keystone_response.text}"
+        else:
+            result["token"] = keystone_response.headers["X-Subject-Token"]
     return result
 
 

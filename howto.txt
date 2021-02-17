@@ -1,5 +1,42 @@
+Setup PostgreSQL
+----------------
+
+sudo apt install postgresql-12
+
+sudo -u postgres psql postgres
+
+postgres=# \password postgres
+Enter new password:
+Enter it again:
+
+change "peer" to "md5" in /etc/postgresql/12/main/pg_hba.conf
+
+sudo systemctl restart postgresql
+
+sudo systemctl status postgresql
+
+psql -U postgres
+
+postgres=# CREATE DATABASE test;
+
+\c test;
+
+CREATE TABLE rest_api_requests (
+    recorded_at timestamp,
+    remote_address varchar(32),
+    url varchar(512),
+    http_method varchar(8),
+    request_body varchar(512)
+);
+
+\dt
+
+
 Start rest api:
 -----------------
+
+sudo apt install libpq-dev
+
 source cloud_venv/bin/activate
 
 cd test-cloud-manager
