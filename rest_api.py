@@ -6,15 +6,14 @@ import config
 import core
 
 
-def log_rest_api_request():
+def log_rest_api_request(request):
     connection = psycopg2.connect(
         f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
     cursor = connection.cursor()
     cursor.execute(
         "INSERT INTO rest_api_requests (recorded_at, remote_address, url, http_method, request_body) "
         "VALUES (%s, %s, %s, %s, %s)",
-        (datetime.datetime.now(), bottle.request.remote_addr, bottle.request.url, bottle.request.method,
-         str(bottle.request.json)))
+        (datetime.datetime.now(), request.remote_addr, request.url, request.method, str(request.json)))
     connection.commit()
     cursor.close()
     connection.close()
@@ -23,23 +22,20 @@ def log_rest_api_request():
 def auth():
     def decorator(func):
         def wrapper(*args, **kwargs):
-            log_rest_api_request()
-            if "user" not in bottle.request.headers:
-                return bottle.HTTPResponse(status=400, body={"error": "user was not provided"})
-            if "password" not in bottle.request.headers:
-                return bottle.HTTPResponse(status=400, body={"error": "password was not provided"})
-            else:
-                credentials = {"user": bottle.request.headers["user"], "password": bottle.request.headers["password"]}
-                if "domain_id" in bottle.request.headers:
-                    credentials["domain_id"] = bottle.request.headers["domain_id"]
-                if "project_name" in bottle.request.headers:
-                    credentials["project_name"] = bottle.request.headers["project_name"]
-                keystone_response = core.get_token(**credentials)
-                if "error" in keystone_response:
-                    return bottle.HTTPResponse(status=503,
-                                               body={"error": keystone_response["error"]})
-                bottle.request.token = keystone_response["token"]
-                return func(*args, **kwargs)
+            log_rest_api_request(request=bottle.request)
+            credentials = dict()
+            for required in ["user", "password"]:
+                if required not in bottle.request.headers:
+                    return bottle.HTTPResponse(status=400, body={"error": f"{required} was not provided"})
+                credentials[required] = bottle.request.headers[required]
+            for additional in ["domain_id", "project_name"]:
+                credentials[additional] = bottle.request.headers.get(additional)
+            keystone_response = core.get_token(**credentials)
+            if "error" in keystone_response:
+                return bottle.HTTPResponse(status=503,
+                                           body={"error": keystone_response["error"]})
+            bottle.request.token = keystone_response["token"]
+            return func(*args, **kwargs)
         return wrapper
     return decorator
 

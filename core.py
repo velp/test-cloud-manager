@@ -3,7 +3,9 @@ import requests
 import config
 
 
-def get_token(user, password, domain_id="default", project_name=None):
+def get_token(user, password, domain_id=None, project_name=None):
+    if domain_id is None:
+        domain_id = "default"
     token_data = {
         "auth": {
             "identity": {
@@ -61,37 +63,42 @@ def get_virtual_machines(token):
     return {"status": response.status_code, "data": response.json()}
 
 
-def create_virtual_machine(token, flavor_name, image_name, network_id, virtual_machine_name):
-    all_flavors = get_flavors(token)
-    if all_flavors["status"] != 200:
-        return {"status": all_flavors["status"], "error": f"get flavor list error: {all_flavors['error']}"}
-    flavor_ref = None
-    for flavor_item in all_flavors["data"]["flavors"]:
-        if flavor_item["name"] == flavor_name:
-            flavor_ref = flavor_item["id"]
-            break
-    if flavor_ref is None:
-        return {"status": 404, "error": f"flavor {flavor_name} not found"}
+def get_resource_id_by_name(token, resource_name, resource_type, function_to_get_resources):
+    all_resources = globals()[function_to_get_resources](token)
+    if all_resources["status"] != 200:
+        return {"status": all_resources["status"], "error": f"get resource list failed: {all_resources['error']}"}
+    for item in all_resources["data"][resource_type]:
+        if item["name"] == resource_name:
+            return item["id"]
+    return {"status": 404, "error": f"resource {resource_name} not found"}
 
-    all_images = get_images(token)
-    if all_images["status"] != 200:
-        return {"status": all_images["status"], "error": f"get image list error: {all_images['error']}"}
-    image_ref = None
-    for image_item in all_images["data"]["images"]:
-        if image_item["name"] == image_name:
-            image_ref = image_item["id"]
-            break
-    if image_ref is None:
-        return {"status": 404, "error": f"image {image_name} not found"}
+
+def create_virtual_machine(token, flavor_name, image_name, network_id, virtual_machine_name):
+    request_data = {
+        "server": {
+            "name": virtual_machine_name,
+            "min_count": 1,
+            "max_count": 1,
+            "networks": [{"uuid": network_id}]
+            }
+        }
+    for ref, ref_data in {
+        "flavorRef": {"resource_name": flavor_name, "resource_type": "flavors",
+                      "function_to_get_resources": "get_flavors"},
+        "imageRef": {"resource_name": image_name, "resource_type": "images",
+                     "function_to_get_resources": "get_images"}}.items():
+        service_response = get_resource_id_by_name(token, **ref_data)
+        if "error" in service_response:
+            return service_response
+        request_data["server"][ref] = service_response
     response = requests.post(url=f"http://{config.openstack_ip}/compute/v2.1/servers",
                              headers={"X-Auth-Token": token},
-                             json={"server": {
-                                 "name": virtual_machine_name,
-                                 "imageRef": image_ref,
-                                 "flavorRef": flavor_ref,
-                                 "min_count": 1,
-                                 "max_count": 1,
-                                 "networks": [{"uuid": network_id}]
-                                }
-                             })
+                             json=request_data
+                             )
     return {"status": response.status_code, "data": response.json()}
+
+
+def get_launched_machines_number(token):
+    vms_data = get_virtual_machines(token)
+    if vms_data["status"] != 200:
+        return {"status": vms_data["status"], "error": f"couldn't get server list: {vms_data['data']}"}
