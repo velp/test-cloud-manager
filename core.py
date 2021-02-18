@@ -98,7 +98,14 @@ def create_virtual_machine(token, flavor_name, image_name, network_id, virtual_m
     return {"status": response.status_code, "data": response.json()}
 
 
-def get_launched_machines_number(token):
-    vms_data = get_virtual_machines(token)
+def get_virtual_machines_number():
+    token = get_token(user=config.service_openstack_user,
+                      password=config.service_openstack_password,
+                      domain_id=config.service_openstack_domain_id,
+                      project_name=config.service_openstack_project_name)
+    if "error" in token:
+        return token
+    vms_data = get_virtual_machines(token=token["token"])
     if vms_data["status"] != 200:
         return {"status": vms_data["status"], "error": f"couldn't get server list: {vms_data['data']}"}
+    return len(vms_data['data']["servers"])
