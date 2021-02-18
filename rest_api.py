@@ -5,22 +5,25 @@ import psycopg2
 import config
 import core
 
-app = bottle.Bottle()
-app.connection = psycopg2.connect(
-    f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
-app.cursor = app.connection.cursor()
+
+def log_rest_api_request():
+    connection = psycopg2.connect(
+        f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+    cursor = connection.cursor()
+    cursor.execute(
+        "INSERT INTO rest_api_requests (recorded_at, remote_address, url, http_method, request_body) "
+        "VALUES (%s, %s, %s, %s, %s)",
+        (datetime.datetime.now(), bottle.request.remote_addr, bottle.request.url, bottle.request.method,
+         str(bottle.request.json)))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
 
 def auth():
     def decorator(func):
         def wrapper(*args, **kwargs):
-            app.cursor.execute(
-                "INSERT INTO rest_api_requests (recorded_at, remote_address, url, http_method, request_body) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (datetime.datetime.now(), bottle.request.remote_addr, bottle.request.url, bottle.request.method,
-                 bottle.request.json))
-            app.connection.commit()
-            # cur.close()
-            # conn.close()
+            log_rest_api_request()
             if "user" not in bottle.request.headers:
                 return bottle.HTTPResponse(status=400, body={"error": "user was not provided"})
             if "password" not in bottle.request.headers:
@@ -29,6 +32,8 @@ def auth():
                 credentials = {"user": bottle.request.headers["user"], "password": bottle.request.headers["password"]}
                 if "domain_id" in bottle.request.headers:
                     credentials["domain_id"] = bottle.request.headers["domain_id"]
+                if "project_name" in bottle.request.headers:
+                    credentials["project_name"] = bottle.request.headers["project_name"]
                 keystone_response = core.get_token(**credentials)
                 if "error" in keystone_response:
                     return bottle.HTTPResponse(status=503,
@@ -37,6 +42,9 @@ def auth():
                 return func(*args, **kwargs)
         return wrapper
     return decorator
+
+
+app = bottle.Bottle()
 
 
 @app.get('/api/token')
@@ -89,4 +97,4 @@ def create_virtual_machine():
     return bottle.HTTPResponse(status=result["status"], body=result["data"])
 
 
-bottle.run(app, host="192.168.0.104", port=8081, debug=True)
+bottle.run(app, host=config.rest_api_ip, port=config.rest_api_port, debug=config.debug_mode)

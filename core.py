@@ -3,8 +3,8 @@ import requests
 import config
 
 
-def get_token(user, password, domain_id="default"):
-    data = {
+def get_token(user, password, domain_id="default", project_name=None):
+    token_data = {
         "auth": {
             "identity": {
                 "methods": ["password"],
@@ -18,10 +18,17 @@ def get_token(user, password, domain_id="default"):
             }
         }
     }
+    if project_name is not None:
+        token_data["auth"]["scope"] = {
+            "project": {
+                "name": project_name,
+                "domain": {"id": domain_id}
+            }
+        }
     result = dict()
     try:
         keystone_response = requests.post(url=f"http://{config.openstack_ip}/identity/v3/auth/tokens?nocatalog",
-                                          json=data)
+                                          json=token_data)
     except requests.exceptions.ConnectionError:
         result["error"] = f"keystone is not available."
     else:

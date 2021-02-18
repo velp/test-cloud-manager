@@ -47,12 +47,13 @@ Get token via rest api:
 --------------------------
 curl -i \
   -H "Content-Type: application/json" \
-  -H "user: <USER>" \
-  -H "password: <PASSWORD>" \
+  -H "user: demo" \
+  -H "password: test" \
+  -H "project_name: demo" \
   "http://192.168.0.104:8081/api/token" ; echo
 
 list of virtual machines
-curl -i -H "Content-Type: application/json" -H "user: <USER>" -H "password: <PASSWORD>" \
+curl -i -H "Content-Type: application/json" -H "user: demo" -H "password: test" -H "project_name: demo" \
 "http://192.168.0.104:8081/api/virtual_machines" ; echo
 
 list of networks
@@ -69,10 +70,10 @@ curl -i -H "Content-Type: application/json" -H "user: <USER>" -H "password: <PAS
 
 create virtual machine
 
-curl -i -H "Content-Type: application/json" -H "user: <USER>" -H "password: <PASSWORD>" \
--d '{"flavor_name": "m1.nano", "image_name": "cirros-0.5.1-x86_64-disk", \
-"network_id": "1edf997e-dcde-485b-ae55-c16588c1e4f6", "virtual_machine_name": "test_3"}' \
-"http://192.168.0.104:8081/api/virtual_machines" ; echo
+curl -i -H "Content-Type: application/json" -H "user: demo" -H "password: test" -H "project_name: demo" \
+ -d '{"flavor_name": "m1.nano", "image_name": "cirros-0.5.1-x86_64-disk", \
+ "network_id": "1edf997e-dcde-485b-ae55-c16588c1e4f6", "virtual_machine_name": "test_3"}' \
+ "http://192.168.0.104:8081/api/virtual_machines" ; echo
 
 
 
