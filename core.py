@@ -1,4 +1,7 @@
+import datetime
+import psycopg2
 import requests
+import time
 
 import config
 
@@ -109,3 +112,25 @@ def get_virtual_machines_number():
     if vms_data["status"] != 200:
         return {"status": vms_data["status"], "error": f"couldn't get server list: {vms_data['data']}"}
     return len(vms_data['data']["servers"])
+
+
+def send_statistics():
+    try:
+        connection = psycopg2.connect(
+            f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+        cursor = connection.cursor()
+        while True:
+            vm_number = get_virtual_machines_number()
+            if not isinstance(vm_number, int):
+                print(vm_number)
+                continue
+            cursor.execute(
+                "INSERT INTO statistics (date_accurate_to_the_hour, virtual_machines_number) "
+                "VALUES (%s, %s)",
+                (datetime.datetime.utcnow().replace(minute=0, second=0, microsecond=0), vm_number))
+            connection.commit()
+            time.sleep(config.statistics_frequency_in_sec)
+    except psycopg2.errors.UndefinedTable:
+        print("SQL table does not exist")
+    except psycopg2.errors.UniqueViolation:
+        print("statistics for the hour was already recorded")

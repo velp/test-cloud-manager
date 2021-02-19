@@ -1,34 +1,29 @@
 import bottle
-import datetime
 import psycopg2
 import threading
-import time
 
 import config
 import core
 
 
 def log_rest_api_request(request):
-    connection = psycopg2.connect(
-        f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
-    cursor = connection.cursor()
-    cursor.execute(
-        "INSERT INTO rest_api_requests (recorded_at, remote_address, url, http_method, request_body) "
-        "VALUES (%s, %s, %s, %s, %s)",
-        (datetime.datetime.now(), request.remote_addr, request.url, request.method, str(request.json)))
-    connection.commit()
-    cursor.close()
-    connection.close()
-
-
-def send_statistics():
-    while True:
-        vm_number = core.get_virtual_machines_number()
-        if not isinstance(vm_number, int):
-            print(vm_number)
-            continue
-        print(f"sending stats: vm number = {vm_number}")
-        time.sleep(config.statistics_frequency_in_sec)
+    connection = None
+    cursor = None
+    try:
+        connection = psycopg2.connect(
+            f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO rest_api_requests (remote_address, url, http_method, request_body) "
+            "VALUES (%s, %s, %s, %s)",
+            (request.remote_addr, request.url, request.method, str(request.json)))
+        connection.commit()
+    except psycopg2.errors.UndefinedTable:
+        print("SQL table does not exist")
+    finally:
+        if connection is not None:
+            cursor.close()
+            connection.close()
 
 
 def auth():
@@ -105,6 +100,6 @@ def create_virtual_machine():
     return bottle.HTTPResponse(status=result["status"], body=result["data"])
 
 
-stats = threading.Thread(target=send_statistics, daemon=True)
+stats = threading.Thread(target=core.send_statistics, daemon=True)
 stats.start()
 bottle.run(app, host=config.rest_api_ip, port=config.rest_api_port, debug=config.debug_mode)

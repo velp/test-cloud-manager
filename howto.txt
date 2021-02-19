@@ -23,16 +23,16 @@ postgres=# CREATE DATABASE test;
 
 CREATE TABLE rest_api_requests (
     created_at timestamp DEFAULT current_timestamp,
-    remote_address varchar(32),
+    remote_address cidr,
     url varchar(512),
     http_method varchar(8),
     request_body varchar(512)
 );
 
 CREATE TABLE statistics (
-    created_at timestamp DEFAULT current_timestamp,
-    timestamp_without_minutes varchar(64)
-    virtual_machines_number int
+    date_accurate_to_the_hour timestamp NOT NULL,
+    virtual_machines_number smallint NOT NULL,
+    UNIQUE (date_accurate_to_the_hour)
 );
 
 
