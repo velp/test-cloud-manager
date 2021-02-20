@@ -5,6 +5,11 @@ import time
 
 import config
 
+# TODO: unite all these functions in class
+# TODO: keep sql connection in class
+# TODO: use sqlalchemy instead of psycopg2
+# TODO: use logger instead of prints
+
 
 def get_token(user, password, domain_id=None, project_name=None):
     if domain_id is None:

@@ -5,6 +5,12 @@ import threading
 import config
 import core
 
+# TODO: use logger instead of prints
+# TODO: log api call asynchronously
+# TODO: keep sql connection in rest api scope
+# TODO: use sqlalchemy instead of psycopg2
+# TODO: us noSQL for api requests logging
+
 
 def log_rest_api_request(request):
     connection = None

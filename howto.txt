@@ -35,12 +35,6 @@ CREATE TABLE statistics (
     UNIQUE (date_accurate_to_the_hour)
 );
 
-
-
-
-
-
-
 \dt
 
 
@@ -86,6 +80,11 @@ curl -i -H "Content-Type: application/json" -H "user: demo" -H "password: test" 
  -d '{"flavor_name": "m1.nano", "image_name": "cirros-0.5.1-x86_64-disk", \
  "network_id": "1edf997e-dcde-485b-ae55-c16588c1e4f6", "virtual_machine_name": "test_3"}' \
  "http://192.168.0.104:8081/api/virtual_machines" ; echo
+
+get stats
+
+curl -i -H "Content-Type: application/json" -H "user: demo" -H "password: test" \
+"http://192.168.0.104:8081/api/statistics/virtual_machines/number/per_day" ; echo
 
 
 
