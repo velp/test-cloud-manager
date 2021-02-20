@@ -115,11 +115,13 @@ def get_virtual_machines_number():
 
 
 def send_statistics():
-    try:
-        connection = psycopg2.connect(
-            f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
-        cursor = connection.cursor()
-        while True:
+    connection = None
+    cursor = None
+    while True:
+        try:
+            connection = psycopg2.connect(
+                f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+            cursor = connection.cursor()
             vm_number = get_virtual_machines_number()
             if not isinstance(vm_number, int):
                 print(vm_number)
@@ -129,8 +131,20 @@ def send_statistics():
                 "VALUES (%s, %s)",
                 (datetime.datetime.utcnow().replace(minute=0, second=0, microsecond=0), vm_number))
             connection.commit()
+        except psycopg2.errors.UndefinedTable:
+            print("SQL table does not exist")
+        except psycopg2.errors.UniqueViolation:
+            print("statistics for the hour was already recorded")
+        finally:
+            if connection is not None:
+                cursor.close()
+                connection.close()
             time.sleep(config.statistics_frequency_in_sec)
-    except psycopg2.errors.UndefinedTable:
-        print("SQL table does not exist")
-    except psycopg2.errors.UniqueViolation:
-        print("statistics for the hour was already recorded")
+
+
+def get_virtual_machines_number_per_day():
+    connection = psycopg2.connect(
+        f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM statistics WHERE date_accurate_to_the_hour > now() - interval '1 day'")
+    return {"data": [{"timestamp": record[0], "virtual_machines_number": record[1]} for record in cursor.fetchall()]}

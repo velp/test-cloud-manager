@@ -100,6 +100,17 @@ def create_virtual_machine():
     return bottle.HTTPResponse(status=result["status"], body=result["data"])
 
 
+@app.get('/api/statistics/virtual_machines/number/per_day')
+@auth()
+def get_virtual_machines_number_per_day():
+    result = core.get_virtual_machines_number_per_day()
+    if "error" in result:
+        return bottle.HTTPResponse(status=503, body=result["error"])
+    for item in result["data"]:
+        item["timestamp"] = str(item["timestamp"])
+    return bottle.HTTPResponse(status=200, body=str(result["data"]))
+
+
 stats = threading.Thread(target=core.send_statistics, daemon=True)
 stats.start()
 bottle.run(app, host=config.rest_api_ip, port=config.rest_api_port, debug=config.debug_mode)
