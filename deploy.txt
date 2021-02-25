@@ -1,0 +1,25 @@
+BUILD
+------
+cd rest_api_db/
+docker build -t rest_api_db .
+cd ../rest_api
+docker build -t rest_api .
+docker images
+cd -
+
+
+RUN
+----
+source config.sh
+
+docker run --name rest_api_db -e POSTGRES_PASSWORD=$DB_PASSWORD -e POSTGRES_DB=$DB_NAME -e POSTGRES_USER=$DB_USER \
+-p $DB_HOST:$DB_PORT:5432 -d rest_api_db
+
+docker run --name rest_api --env-file rest_api/env.list -p $REST_API_HOST:$REST_API_PORT:8080 -d rest_api
+
+docker ps
+
+
+DELETE
+-------
+docker rm -f rest_api_db rest_api

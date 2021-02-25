@@ -1,14 +1,17 @@
 import datetime
+import os
 import psycopg2
 import requests
 import time
-
-import config
 
 # TODO: unite all these functions in class
 # TODO: keep sql connection in class
 # TODO: use sqlalchemy instead of psycopg2
 # TODO: use logger instead of prints
+
+openstack_url = f"http://{os.getenv('OPENSTACK_HOST')}"
+db_connection_settings = f"host={os.getenv('DB_HOST')} port={os.getenv('DB_PORT')} dbname={os.getenv('DB_NAME')} " \
+                         f"user={os.getenv('DB_USER')} password={os.getenv('DB_PASSWORD')}"
 
 
 def get_token(user, password, domain_id=None, project_name=None):
@@ -37,7 +40,7 @@ def get_token(user, password, domain_id=None, project_name=None):
         }
     result = dict()
     try:
-        keystone_response = requests.post(url=f"http://{config.openstack_ip}/identity/v3/auth/tokens?nocatalog",
+        keystone_response = requests.post(url=f"{openstack_url}/identity/v3/auth/tokens?nocatalog",
                                           json=token_data)
     except requests.exceptions.ConnectionError:
         result["error"] = f"keystone is not available."
@@ -50,23 +53,23 @@ def get_token(user, password, domain_id=None, project_name=None):
 
 
 def get_flavors(token):
-    response = requests.get(url=f"http://{config.openstack_ip}/compute/v2.1/flavors/detail",
+    response = requests.get(url=f"{openstack_url}/compute/v2.1/flavors/detail",
                             headers={"X-Auth-Token": token})
     return {"status": response.status_code, "data": response.json()}
 
 
 def get_images(token):
-    response = requests.get(url=f"http://{config.openstack_ip}/image/v2/images", headers={"X-Auth-Token": token})
+    response = requests.get(url=f"{openstack_url}/image/v2/images", headers={"X-Auth-Token": token})
     return {"status": response.status_code, "data": response.json()}
 
 
 def get_networks(token):
-    response = requests.get(url=f"http://{config.openstack_ip}:9696/v2.0/networks", headers={"X-Auth-Token": token})
+    response = requests.get(url=f"{openstack_url}:9696/v2.0/networks", headers={"X-Auth-Token": token})
     return {"status": response.status_code, "data": response.json()}
 
 
 def get_virtual_machines(token):
-    response = requests.get(url=f"http://{config.openstack_ip}/compute/v2.1/servers/detail",
+    response = requests.get(url=f"{openstack_url}/compute/v2.1/servers/detail",
                             headers={"X-Auth-Token": token})
     return {"status": response.status_code, "data": response.json()}
 
@@ -99,7 +102,7 @@ def create_virtual_machine(token, flavor_name, image_name, network_id, virtual_m
         if "error" in service_response:
             return service_response
         request_data["server"][ref] = service_response
-    response = requests.post(url=f"http://{config.openstack_ip}/compute/v2.1/servers",
+    response = requests.post(url=f"{openstack_url}/compute/v2.1/servers",
                              headers={"X-Auth-Token": token},
                              json=request_data
                              )
@@ -107,10 +110,10 @@ def create_virtual_machine(token, flavor_name, image_name, network_id, virtual_m
 
 
 def get_virtual_machines_number():
-    token = get_token(user=config.service_openstack_user,
-                      password=config.service_openstack_password,
-                      domain_id=config.service_openstack_domain_id,
-                      project_name=config.service_openstack_project_name)
+    token = get_token(user=os.getenv("SERVICE_OPENSTACK_USER"),
+                      password=os.getenv("SERVICE_OPENSTACK_PASSWORD"),
+                      domain_id=os.getenv("SERVICE_OPENSTACK_DOMAIN_ID"),
+                      project_name=os.getenv("SERVICE_OPENSTACK_PROJECT_NAME"))
     if "error" in token:
         return token
     vms_data = get_virtual_machines(token=token["token"])
@@ -124,8 +127,7 @@ def send_statistics():
     cursor = None
     while True:
         try:
-            connection = psycopg2.connect(
-                f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+            connection = psycopg2.connect(db_connection_settings)
             cursor = connection.cursor()
             vm_number = get_virtual_machines_number()
             if not isinstance(vm_number, int):
@@ -144,12 +146,11 @@ def send_statistics():
             if connection is not None:
                 cursor.close()
                 connection.close()
-            time.sleep(config.statistics_frequency_in_sec)
+            time.sleep(3600)
 
 
 def get_virtual_machines_number_per_day():
-    connection = psycopg2.connect(
-        f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+    connection = psycopg2.connect(db_connection_settings)
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM statistics WHERE date_accurate_to_the_hour > now() - interval '1 day'")
     return {"data": [{"timestamp": record[0], "virtual_machines_number": record[1]} for record in cursor.fetchall()]}

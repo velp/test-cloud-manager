@@ -1,8 +1,8 @@
 import bottle
 import psycopg2
+import os
 import threading
 
-import config
 import core
 
 # TODO: use logger instead of prints
@@ -16,8 +16,7 @@ def log_rest_api_request(request):
     connection = None
     cursor = None
     try:
-        connection = psycopg2.connect(
-            f"dbname={config.database_name} user={config.database_user} password={config.database_password}")
+        connection = psycopg2.connect(core.db_connection_settings)
         cursor = connection.cursor()
         cursor.execute(
             "INSERT INTO rest_api_requests (remote_address, url, http_method, request_body) "
@@ -119,4 +118,4 @@ def get_virtual_machines_number_per_day():
 
 stats = threading.Thread(target=core.send_statistics, daemon=True)
 stats.start()
-bottle.run(app, host=config.rest_api_ip, port=config.rest_api_port, debug=config.debug_mode)
+bottle.run(app, host="0.0.0.0", debug=os.getenv("REST_API_DEBUG_MODE"))
