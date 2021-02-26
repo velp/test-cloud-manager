@@ -8,6 +8,8 @@ import time
 # TODO: keep sql connection in class
 # TODO: use sqlalchemy instead of psycopg2
 # TODO: use logger instead of prints
+# TODO: optimise statistics getting for day. Now we selects all records for last day.
+#       it's better to take last 24 records and selects for one day from them.
 
 openstack_url = f"http://{os.getenv('OPENSTACK_HOST')}"
 db_connection_settings = f"host={os.getenv('DB_HOST')} port={os.getenv('DB_PORT')} dbname={os.getenv('DB_NAME')} " \
