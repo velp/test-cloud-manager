@@ -1,0 +1,13 @@
+export DB_USER="postgres"
+export DB_PASSWORD="test"
+export DB_HOST="192.168.0.104"
+export DB_PORT=5432
+export DB_NAME="postgres"
+export REST_API_HOST="192.168.0.104"
+export REST_API_PORT=8081
+export REST_API_DEBUG_MODE=True
+export OPENSTACK_HOST=<OPENSTACK_IP>
+export SERVICE_OPENSTACK_USER="demo"
+export SERVICE_OPENSTACK_PASSWORD="test"
+export SERVICE_OPENSTACK_DOMAIN_ID="default"
+export SERVICE_OPENSTACK_PROJECT_NAME="demo"
